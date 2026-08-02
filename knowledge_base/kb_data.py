@@ -1,0 +1,80 @@
+KB_ARTICLES = [
+    {
+        "id": 1,
+        "title": "SQL Injection (SQLi)",
+        "category": "Injection",
+        "cwe_id": "CWE-89",
+        "owasp_mapping": "OWASP A03:2021-Injection",
+        "severity": "High",
+        "description": "SQL Injection occurs when user-supplied input is directly concatenated into SQL queries without proper sanitization or parameterization, enabling attackers to read, modify, or delete database tables.",
+        "vulnerable_example": "query = f'SELECT * FROM users WHERE username = \"{user_input}\"'\ncursor.execute(query)",
+        "secure_example": "query = 'SELECT * FROM users WHERE username = %s'\ncursor.execute(query, (user_input,))",
+        "mitigation": "Always use parameterized queries, prepared statements, or standard ORMs (e.g. SQLAlchemy) instead of manual string formatting.",
+        "references": "https://owasp.org/www-community/attacks/SQL_Injection"
+    },
+    {
+        "id": 2,
+        "title": "Unsafe Code Evaluation (eval / exec)",
+        "category": "Code Execution",
+        "cwe_id": "CWE-95",
+        "owasp_mapping": "OWASP A03:2021-Injection",
+        "severity": "Critical",
+        "description": "The eval() and exec() functions dynamically execute arbitrary Python strings as code. Passing user inputs into eval/exec leads directly to Remote Code Execution (RCE).",
+        "vulnerable_example": "result = eval(user_supplied_string)",
+        "secure_example": "import ast\nresult = ast.literal_eval(user_supplied_string)",
+        "mitigation": "Avoid eval and exec completely. Use ast.literal_eval() for parsing safe literal data structures (dicts, lists, tuples, strings).",
+        "references": "https://docs.python.org/3/library/ast.html#ast.literal_eval"
+    },
+    {
+        "id": 3,
+        "title": "Command Injection",
+        "category": "Injection",
+        "cwe_id": "CWE-78",
+        "owasp_mapping": "OWASP A03:2021-Injection",
+        "severity": "Critical",
+        "description": "Command Injection happens when an application passes untrusted user input to a system shell execution call such as os.system() or subprocess.run(shell=True).",
+        "vulnerable_example": "import os\nos.system('ping -c 1 ' + user_host)",
+        "secure_example": "import subprocess\nsubprocess.run(['ping', '-c', '1', user_host], check=True)",
+        "mitigation": "Never pass shell=True to subprocess functions. Pass commands and arguments as an array of strict argument strings.",
+        "references": "https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html"
+    },
+    {
+        "id": 4,
+        "title": "Unsafe Pickle Deserialization",
+        "category": "Deserialization",
+        "cwe_id": "CWE-502",
+        "owasp_mapping": "OWASP A08:2021-Software and Data Integrity Failures",
+        "severity": "Critical",
+        "description": "Python's pickle module is not secure against erroneous or maliciously constructed data. Unpickling untrusted input executes arbitrary code via __reduce__.",
+        "vulnerable_example": "import pickle\ndata = pickle.loads(user_uploaded_bytes)",
+        "secure_example": "import json\ndata = json.loads(user_uploaded_json_string)",
+        "mitigation": "Do not use pickle for untrusted network payloads or user uploads. Use structured safe serialization formats such as JSON or Protocol Buffers.",
+        "references": "https://docs.python.org/3/library/pickle.html"
+    },
+    {
+        "id": 5,
+        "title": "Hardcoded Secrets & API Keys",
+        "category": "Authentication",
+        "cwe_id": "CWE-798",
+        "owasp_mapping": "OWASP A07:2021-Identification and Authentication Failures",
+        "severity": "High",
+        "description": "Hardcoding API tokens, database credentials, or secret keys directly inside source repositories exposes credentials when code is shared or pushed to public VCS repositories.",
+        "vulnerable_example": "API_KEY = 'sk_live_99887766554433221100'",
+        "secure_example": "import os\nAPI_KEY = os.environ.get('API_KEY')",
+        "mitigation": "Store secret keys in environment variables or external secret managers (AWS Secrets Manager, HashiCorp Vault). Add credential files to .gitignore.",
+        "references": "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html"
+    },
+    {
+        "id": 6,
+        "title": "Weak Cryptographic Hashing",
+        "category": "Cryptography",
+        "cwe_id": "CWE-328",
+        "owasp_mapping": "OWASP A02:2021-Cryptographic Failures",
+        "severity": "Medium",
+        "description": "Algorithms like MD5 and SHA-1 suffer from collision vulnerabilities and are computationally cheap, making them unsuitable for password hashing or integrity verification.",
+        "vulnerable_example": "import hashlib\npassword_hash = hashlib.md5(password.encode()).hexdigest()",
+        "secure_example": "import hashlib\npassword_hash = hashlib.sha256(password.encode()).hexdigest()",
+        "mitigation": "Use modern cryptographic hashes (SHA-256/SHA-512) or specialized password hashing functions like Argon2, bcrypt, or PBKDF2.",
+        "references": "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"
+    }
+]

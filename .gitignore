@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.db
+*.sqlite
+*.sqlite3
+temp_clones/
+reports_output/
+saved_models/*.joblib
+saved_models/*.pt
+.env
+.DS_Store
