@@ -12,3 +12,6 @@ saved_models/*.joblib
 saved_models/*.pt
 .env
 .DS_Store
+.venv/
+venv/
+

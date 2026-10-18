@@ -7,7 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
+
 from database.db import init_db, get_db
+
 from database.models import User, Scan, Vulnerability, KnowledgeBaseArticle, SearchHistory, ChatHistory, AuditLog
 from backend.scanner import StaticCodeScanner
 from backend.ast_parser import PythonASTParser

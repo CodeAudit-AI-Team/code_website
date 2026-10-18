@@ -2,7 +2,14 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
+
 import streamlit as st
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -16,7 +23,6 @@ from backend.ml_engine import MLVulnerabilityClassifier
 from backend.github_scanner import GitHubScanner
 from backend.report_generator import ReportGenerator
 from knowledge_base.kb_data import KB_ARTICLES
-from chat.assistant import AISecurityAssistant
 
 st.set_page_config(
     page_title="AI Secure Code Intelligence Platform",
@@ -25,20 +31,46 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Dark Cybersecurity CSS Theme
+# Dark Cybersecurity 3D Glassmorphism CSS Theme
 st.markdown("""
 <style>
-    .main { background-color: #0f172a; color: #f8fafc; }
-    .stApp { background-color: #0f172a; }
-    div[data-testid="stSidebar"] { background-color: #1e293b; border-right: 1px solid #334155; }
-    h1, h2, h3 { color: #38bdf8 !important; font-family: 'Inter', sans-serif; }
-    .metric-card { background-color: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 10px; text-align: center; }
-    .metric-value { font-size: 2rem; font-weight: bold; color: #38bdf8; }
-    .metric-label { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; }
-    .badge-critical { background-color: #881337; color: #fda4af; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
-    .badge-high { background-color: #9f1239; color: #fecdd3; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
-    .badge-medium { background-color: #854d0e; color: #fef08a; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
-    .badge-low { background-color: #1e3a8a; color: #bfdbfe; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    /* Global Background with deep 3D gradient */
+    .main { background: radial-gradient(circle at top left, #0f172a, #020617); color: #f8fafc; }
+    .stApp { background: #020617; }
+    
+    /* 3D Glassmorphism Sidebar */
+    div[data-testid="stSidebar"] { 
+        background: rgba(30, 41, 59, 0.6); 
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05); 
+        box-shadow: inset -5px 0 15px rgba(0,0,0,0.5);
+    }
+    
+    h1, h2, h3 { color: #38bdf8 !important; font-family: 'Inter', sans-serif; text-shadow: 0 4px 10px rgba(56,189,248,0.3); }
+    
+    /* 3D Floating Metric Cards */
+    .metric-card { 
+        background: linear-gradient(145deg, #1e293b, #0f172a); 
+        border: 1px solid rgba(255,255,255,0.05); 
+        padding: 20px; 
+        border-radius: 16px; 
+        text-align: center; 
+        box-shadow:  10px 10px 20px #060910, -10px -10px 20px #182544;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow:  15px 15px 25px #060910, -15px -15px 25px #182544, inset 0 0 10px rgba(56,189,248,0.2);
+    }
+    .metric-value { font-size: 2.2rem; font-weight: bold; color: #38bdf8; text-shadow: 0 0 15px rgba(56,189,248,0.5); }
+    .metric-label { font-size: 0.9rem; color: #94a3b8; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;}
+    
+    /* 3D Badges */
+    .badge-critical { background: linear-gradient(145deg, #be123c, #881337); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; box-shadow: 2px 4px 8px rgba(136,19,55,0.5); }
+    .badge-high { background: linear-gradient(145deg, #e11d48, #9f1239); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; box-shadow: 2px 4px 8px rgba(159,18,57,0.5); }
+    .badge-medium { background: linear-gradient(145deg, #ca8a04, #854d0e); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; box-shadow: 2px 4px 8px rgba(133,77,14,0.5); }
+    .badge-low { background: linear-gradient(145deg, #2563eb, #1e3a8a); color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: bold; box-shadow: 2px 4px 8px rgba(30,58,138,0.5); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -47,7 +79,6 @@ if "scanner" not in st.session_state:
     st.session_state.scanner = StaticCodeScanner()
     st.session_state.ml_classifier = MLVulnerabilityClassifier()
     st.session_state.github_scanner = GitHubScanner()
-    st.session_state.ai_assistant = AISecurityAssistant()
     st.session_state.chat_history = []
     st.session_state.last_scan = None
     st.session_state.authenticated = False
@@ -56,7 +87,11 @@ if "scanner" not in st.session_state:
 # ==========================================
 # 0. AUTHENTICATION (LOGIN / SIGNUP)
 # ==========================================
-if not st.session_state.authenticated:
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+    st.session_state.username = ""
+
+if not st.session_state.get("authenticated", False):
     st.title("🛡️ AI Secure Code Intelligence Platform")
     st.markdown("Please log in or create an account to access the security dashboard.")
     
@@ -100,7 +135,6 @@ menu = st.sidebar.radio(
         "🐙 GitHub Repository Scanner",
         "📚 Security Knowledge Base",
         "⚡ Vulnerability Search Engine",
-        "🤖 AI Security Assistant",
         "📄 Audit Report Center",
         "⚙️ Admin & System Settings",
         "🚪 Logout"
@@ -163,7 +197,7 @@ if menu == "📊 Dashboard Analytics":
     c3.markdown("<div class='metric-card'><div class='metric-value'>328</div><div class='metric-label'>Vulnerabilities Found</div></div>", unsafe_allow_html=True)
     c4.markdown("<div class='metric-card'><div class='metric-value'>0.24s</div><div class='metric-label'>Avg Scan Latency</div></div>", unsafe_allow_html=True)
 
-    st.markdown("---")
+
 
     col_chart1, col_chart2 = st.columns(2)
 
@@ -180,38 +214,73 @@ if menu == "📊 Dashboard Analytics":
         st.plotly_chart(fig_pie, use_container_width=True)
 
     with col_chart2:
-        st.subheader("Top Vulnerability Categories (OWASP Top 10)")
-        df_owasp = pd.DataFrame({
-            "Category": ["A03: Injection", "A07: Auth Failures", "A02: Crypto", "A08: Data Integrity", "A01: Access Control"],
-            "Occurrences": [120, 78, 65, 42, 23]
+        st.subheader("3D Threat Distribution Vector (OWASP)")
+        # Create a 3D Scatter plot to simulate a 3D threat vector space
+        np.random.seed(42)
+        df_3d = pd.DataFrame({
+            "Risk Score": np.random.randint(50, 100, 100),
+            "Impact Radius": np.random.rand(100) * 10,
+            "Exploitability": np.random.rand(100) * 10,
+            "Category": np.random.choice(["A03: Injection", "A07: Auth", "A02: Crypto"], 100)
         })
-        fig_bar = px.bar(df_owasp, x="Occurrences", y="Category", orientation="h", color="Occurrences", color_continuous_scale="Viridis")
-        fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#f8fafc")
-        st.plotly_chart(fig_bar, use_container_width=True)
+        fig_3d = px.scatter_3d(df_3d, x="Risk Score", y="Impact Radius", z="Exploitability",
+                               color="Category", size="Impact Radius", hover_name="Category",
+                               color_discrete_sequence=px.colors.qualitative.Set1)
+        fig_3d.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            font_color="#f8fafc",
+            scene=dict(
+                xaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.1)", showbackground=True),
+                yaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.1)", showbackground=True),
+                zaxis=dict(backgroundcolor="rgba(0,0,0,0)", gridcolor="rgba(255,255,255,0.1)", showbackground=True)
+            )
+        )
+        st.plotly_chart(fig_3d, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("🤖 Machine Learning Model Performance (CodeBERT / RF)")
+    metrics = st.session_state.ml_classifier.get_model_evaluation_metrics()
+    
+    st.subheader(f"🤖 Machine Learning Model Performance (CodeBERT / RF — {metrics['epochs']} Epochs)")
+    st.caption("All evaluation metrics are calculated dynamically using explicit mathematical equations based on model confusion matrix.")
+
+    # 4 Columns for Dynamic Evaluation Metrics
+    em1, em2, em3, em4 = st.columns(4)
+    em1.markdown(f"<div class='metric-card'><div class='metric-value'>{metrics['accuracy']:.4f}</div><div class='metric-label'>Accuracy<br><small>\\((TP+TN)/Total\\)</small></div></div>", unsafe_allow_html=True)
+    em2.markdown(f"<div class='metric-card'><div class='metric-value'>{metrics['precision']:.4f}</div><div class='metric-label'>Precision<br><small>\\(TP/(TP+FP)\\)</small></div></div>", unsafe_allow_html=True)
+    em3.markdown(f"<div class='metric-card'><div class='metric-value'>{metrics['recall']:.4f}</div><div class='metric-label'>Recall<br><small>\\(TP/(TP+FN)\\)</small></div></div>", unsafe_allow_html=True)
+    em4.markdown(f"<div class='metric-card'><div class='metric-value'>{metrics['f1_score']:.4f}</div><div class='metric-label'>F-Measure (F1 Score)<br><small>\\(2 \\cdot (P \\cdot R)/(P + R)\\)</small></div></div>", unsafe_allow_html=True)
+
+    with st.expander("📐 View Mathematical Equations & Calculation Proof"):
+        eqs = metrics.get("equations", {})
+        st.markdown(f"""
+        - **Accuracy Formula**: $$\\text{{Accuracy}} = \\frac{{TP + TN}}{{TP + TN + FP + FN}} \\implies {eqs.get('accuracy', '')}$$
+        - **Precision Formula**: $$\\text{{Precision}} = \\frac{{TP}}{{TP + FP}} \\implies {eqs.get('precision', '')}$$
+        - **Recall Formula**: $$\\text{{Recall}} = \\frac{{TP}}{{TP + FN}} \\implies {eqs.get('recall', '')}$$
+        - **F-Measure (F1 Score) Formula**: $$\\text{{F1-Score}} = \\frac{{2 \\cdot \\text{{Precision}} \\cdot \\text{{Recall}}}}{{\\text{{Precision}} + \\text{{Recall}}}} \\implies {eqs.get('f1_score', '')}$$
+        - **Configured Epochs (via `.env`)**: `{metrics['epochs']}` Epochs
+        """)
+
     m1, m2 = st.columns(2)
 
-    metrics = st.session_state.ml_classifier.get_model_evaluation_metrics()
-
     with m1:
-        st.write("##### ROC Curve (AUC = 0.978)")
+        st.write(f"##### ROC Curve (AUC = {metrics['roc_auc']:.4f})")
         roc_df = pd.DataFrame(metrics["roc_curve"])
         fig_roc = px.line(roc_df, x="fpr", y="tpr", title="Receiver Operating Characteristic", labels={"fpr": "False Positive Rate", "tpr": "True Positive Rate"})
         fig_roc.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#f8fafc")
         st.plotly_chart(fig_roc, use_container_width=True)
 
     with m2:
-        st.write("##### Training Loss & Accuracy Progression")
+        st.write(f"##### Training Loss & Accuracy Progression ({metrics['epochs']} Epochs)")
         train_df = pd.DataFrame({
             "Epoch": metrics["training_epochs"],
             "Loss": metrics["training_loss"],
             "Accuracy": metrics["validation_accuracy"]
         })
-        fig_train = px.line(train_df, x="Epoch", y=["Loss", "Accuracy"], markers=True)
+        fig_train = px.line(train_df, x="Epoch", y=["Loss", "Accuracy"], markers=True, title=f"Model Metrics over {metrics['epochs']} Epochs")
         fig_train.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#f8fafc")
         st.plotly_chart(fig_train, use_container_width=True)
+
 
 # ==========================================
 # 2. AI CODE SCANNER
@@ -291,9 +360,15 @@ elif menu == "💻 Interactive Playground":
             st.code(ast_p.get_ast_tree_str(), language="python")
 
     with col_btn2:
-        if st.button("✨ Auto-Generate Secure Code Rewrite"):
-            fixed_code = st.session_state.ai_assistant.process_query("rewrite secure", p_code)
-            st.markdown(fixed_code)
+        if st.button("✨ Show Secure Code Rewrite Tips"):
+            st.markdown("""
+**Secure Code Rewriting Guidelines:**
+1. Replace `os.system(cmd)` → `subprocess.run(cmd_list, shell=False)`
+2. Replace `eval(expr)` → `ast.literal_eval(expr)` for safe literals
+3. Replace raw SQL strings → Parameterized queries with `?` or `%s`
+4. Replace `hashlib.md5(pw)` → `hashlib.sha256(pw.encode())`
+5. Replace hardcoded secrets → `os.getenv('SECRET_KEY')`
+""")
 
 # ==========================================
 # 4. GITHUB REPOSITORY SCANNER
@@ -346,27 +421,6 @@ elif menu == "⚡ Vulnerability Search Engine":
             st.code(r['secure_example'], language="python")
             st.markdown("---")
 
-# ==========================================
-# 7. AI SECURITY ASSISTANT
-# ==========================================
-elif menu == "🤖 AI Security Assistant":
-    st.title("🤖 AI Security Assistant Chatbot")
-    st.markdown("Ask security questions, request unit test generation, compare crypto algorithms, or ask for code audits.")
-
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    user_prompt = st.chat_input("Ask a security question (e.g. Why is eval dangerous? Compare SHA1 and SHA256):")
-    if user_prompt:
-        st.session_state.chat_history.append({"role": "user", "content": user_prompt})
-        with st.chat_message("user"):
-            st.markdown(user_prompt)
-
-        reply = st.session_state.ai_assistant.process_query(user_prompt)
-        st.session_state.chat_history.append({"role": "assistant", "content": reply})
-        with st.chat_message("assistant"):
-            st.markdown(reply)
 
 # ==========================================
 # 8. AUDIT REPORT CENTER
